@@ -1,7 +1,5 @@
 describe("Microservices Inject", function() {
-    beforeEach(function() {
-        xservices.clearRegistry()
-    });
+    beforeEach(xservices.clearRegistry);
     
     it("Test Basic Injection", function() {
         registerServiceX();
@@ -28,8 +26,12 @@ describe("Microservices Inject", function() {
         unregisterServiceX();
         expect(q.inj.doit()).toEqual("X2");        
     });
+
+    it("Test Injection Policy 1/Dependency Model", function() {
+
+    });
     
-    it("Test Registration", function() {
+    it("Test Service Registration", function() {
         var q = new Object();
         q.cs = {service: {
                 test: "123",
@@ -47,6 +49,22 @@ describe("Microservices Inject", function() {
         xservices.handle(r);
         
         expect(r.xx.test()).toEqual("testing q");
+    });
+
+    it("Test activation/deactivation callbacks", function() {
+        var x = new Object();
+        var response = [];
+        x.act = function() {
+            response.push("activator");
+        };
+        x.cs = {activator: x.act};
+
+        expect(response.length).toEqual(0);
+
+        xservices.handle(x);
+
+        expect(response.length).toEqual(1);
+        expect(response[0]).toEqual("activator");
     });
 });
 

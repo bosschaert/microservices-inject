@@ -44,6 +44,7 @@ xservices.handle = function(obj) {
     var compSpec = obj.cs;
     xservices.handleRegistration(obj, compSpec);
     xservices.handleInjection(obj, compSpec);
+    xservices.handleActivator(obj, compSpec);
 };
 
 xservices.handleRegistration = function(obj, compSpec) {
@@ -59,6 +60,12 @@ xservices.handleInjection = function(obj, compSpec) {
         obj[ref] = svc;
         xservices.injected[val] = obj;
     }    
+};
+
+xservices.handleActivator = function(obj, compSpec) {
+    if (compSpec.activator !== undefined) {
+        compSpec.activator();
+    }
 };
 xservices.reinjectServices = function(filters) {
     var toReinject = {};
