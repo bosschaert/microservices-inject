@@ -1,12 +1,12 @@
 xservices = new Object();
 xservices.registry = {}; // holds registered services
-xservices.injected = {}; // keeps track of who got injected by what
-xservices.toInject = []; // a list of objects that need to be injected in some way
+xservices.injections = {}; // keeps track of who got injected by what
+xservices.injected = []; // a list of objects that need to be injected in some way
 
 xservices.clearRegistry = function() {
     xservices.registry = {};
-    xservices.injected = {};
-    xservices.toInject = [];
+    xservices.injections = {};
+    xservices.injected = []; // TODO do we need to keep track of the activation state?
 };
 
 xservices.registerService = function(obj, props) {
@@ -52,16 +52,16 @@ xservices.handle = function(obj) {
     if (compSpec.injection === undefined) {
         xservices.handleActivator(obj);
     } else {
-        xservices.toInject.push(obj);
+        xservices.injected.push(obj);
     }
 
     xservices.injectServices();
 };
 
 xservices.injectServices = function() {
-    for (var i = 0; i < xservices.toInject.length; i++) {
-        if (xservices.handleReinjection(xservices.toInject[i])) {
-            xservices.handleActivator(xservices.toInject[i]);
+    for (var i = 0; i < xservices.injected.length; i++) {
+        if (xservices.handleReinjection(xservices.injected[i])) {
+            xservices.handleActivator(xservices.injected[i]);
         }
     }
 };
@@ -84,7 +84,7 @@ xservices.handleInjection = function(obj) {
             var svc = xservices.getService(filter);
             if (svc !== null) {
                 obj[prop] = svc;
-                xservices.injected[filter] = obj;
+                xservices.injections[filter] = obj;
             } else {
                 allDone = false;
             }
@@ -129,14 +129,14 @@ xservices.deactivate = function(obj) {
 xservices.reinjectServices = function(filters) {
     var toReinject = {};
     for (var i = 0; i < filters.length; i++) {
-        for (var filter in xservices.injected) {
+        for (var filter in xservices.injections) {
             if (filter === filters[i]) {
                 var objList = toReinject[filter];
                 if (objList === undefined) {
                     objList = [];
                     toReinject[filter] = objList;
                 }
-                objList.push(xservices.injected[filter]);
+                objList.push(xservices.injections[filter]);
             }
         }
     }
@@ -160,43 +160,3 @@ xservices.reinjectServices = function(filters) {
         }
     }
 };
-
-/// testing
-xservices.test = function() {
-    setupServices();
-  var xx = xservices.getService("b");
-  xx.aaah();
-};
-
-xservices.testinject = function() {
-    setupServices();
-    var q = new Object();
-    q.inject = {xxx: "b", yyy: "x"};
-    xservices.handle(q);
-
-    q.xxx.aaah();  // prints out aaaah
-    xservices.unregisterService(xservices.getService("a"));
-    // will have triggered reinjection
-    q.xxx.aaah();  // now prints out haaaa
-};
-
-function setupServices() {
-    var x = new Object();
-    x.aaah = function() {
-        alert("aaaah");
-    };
-    var y = new Object();
-    y.yeee = function() {
-        alert("yeee");
-    };
-
-    xservices.registerService(x, {a: "aa", b: "bb"});
-    xservices.registerService(y, {x: "123"});
-
-    var xz = new Object();
-    xz.aaah = function() {
-        alert("haaaa");
-    };
-    xservices.registerService(xz, {b: "bb"});
-}
-
