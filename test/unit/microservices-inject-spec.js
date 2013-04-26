@@ -51,7 +51,7 @@ describe("Microservices Inject", function() {
         expect(r.xx.test()).toEqual("testing q");
     });
 
-    it("Test activation/deactivation callbacks", function() {
+    it("Test simple activation", function() {
         var x = new Object();
         var response = [];
         x.act = function() {
@@ -65,6 +65,25 @@ describe("Microservices Inject", function() {
 
         expect(response.length).toEqual(1);
         expect(response[0]).toEqual("activator");
+    });
+
+    it("Test activation once dependency available", function() {
+        var y = new Object();
+        var response = [];
+        y.testActivator = function() {
+            response.push("activated");
+        }
+        y.cs = {activator: y.testActivator,
+                injection: { injected: "dep" }};
+        xservices.handle(y);
+        expect(response.length).toEqual(0);
+
+        var z = new Object();
+        z.cs = {service: { dep: "foo"}};
+        xservices.handle(z);
+
+        expect(response.length).toEqual(1);
+        expect(response[0]).toEqual("activated");
     });
 });
 

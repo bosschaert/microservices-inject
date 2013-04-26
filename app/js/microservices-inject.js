@@ -76,7 +76,7 @@ xservices.handleInjection = function(obj) {
         if (obj[prop] === undefined) {
             var filter = obj.cs.injection[prop];
             var svc = xservices.getService(filter);
-            if (svc !== undefined) {
+            if (svc !== null) {
                 obj[prop] = svc;
                 xservices.injected[filter] = obj;
             } else {
