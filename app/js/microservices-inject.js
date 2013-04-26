@@ -2,6 +2,10 @@ xservices = new Object();
 xservices.registry = {}; // holds registered services
 xservices.injected = {}; // keeps track of who got injected
 
+xservices.clearRegistry = function() {
+    xservices.registry = {};
+};
+
 xservices.registerService = function(obj, props) {
     for (var x in props) {
         var svcs = xservices.registry[x];
@@ -12,6 +16,7 @@ xservices.registerService = function(obj, props) {
         svcs.push(obj);
     }
 };
+
 xservices.unregisterService = function(obj) {
     var unregistered = [];
     for (var key in xservices.registry) {
