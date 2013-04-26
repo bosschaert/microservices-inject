@@ -73,17 +73,28 @@ describe("Microservices Inject", function() {
         y.testActivator = function() {
             response.push("activated");
         }
+        y.testDeactivator = function() {
+            response.push("deactivated");
+        }
         y.cs = {activator: y.testActivator,
+                deactivator: y.testDeactivator,
                 injection: { injected: "dep" }};
         xservices.handle(y);
         expect(response.length).toEqual(0);
 
         var z = new Object();
-        z.cs = {service: { dep: "foo"}};
-        xservices.handle(z);
+        xservices.registerService(z, { dep: "foo"});
 
         expect(response.length).toEqual(1);
         expect(response[0]).toEqual("activated");
+
+        xservices.unregisterService(z);
+
+        expect(response.length).toEqual(2);
+        expect(response[0]).toEqual("activated");
+        expect(response[1]).toEqual("deactivated");
+
+        // unregister a service, and test the cascading effect.
     });
 });
 

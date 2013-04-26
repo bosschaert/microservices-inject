@@ -1,7 +1,7 @@
 xservices = new Object();
 xservices.registry = {}; // holds registered services
-xservices.injected = {}; // keeps track of who got injected
-xservices.toInject = [];
+xservices.injected = {}; // keeps track of who got injected by what
+xservices.toInject = []; // a list of objects that need to be injected in some way
 
 xservices.clearRegistry = function() {
     xservices.registry = {};
@@ -18,6 +18,8 @@ xservices.registerService = function(obj, props) {
         }
         svcs.push(obj);
     }
+
+    xservices.injectServices();
 };
 
 xservices.unregisterService = function(obj) {
@@ -53,6 +55,10 @@ xservices.handle = function(obj) {
         xservices.toInject.push(obj);
     }
 
+    xservices.injectServices();
+};
+
+xservices.injectServices = function() {
     for (var i = 0; i < xservices.toInject.length; i++) {
         if (xservices.handleReinjection(xservices.toInject[i])) {
             xservices.handleActivator(xservices.toInject[i]);
@@ -113,6 +119,13 @@ xservices.isSatisfied = function(obj) {
     return true;
 }
 
+xservices.deactivate = function(obj) {
+    // unregister services
+    if (obj.cs.deactivator !== undefined) {
+        obj.cs.deactivator();
+    }
+}
+
 xservices.reinjectServices = function(filters) {
     var toReinject = {};
     for (var i = 0; i < filters.length; i++) {
@@ -135,7 +148,13 @@ xservices.reinjectServices = function(filters) {
             var compSpec = obj.cs;
             for (var prop in compSpec.injection) {
                 if (compSpec.injection[prop] === filter) {
-                    obj[prop] = xservices.getService(filter);
+                    var svc = xservices.getService(filter);
+                    if (svc != null) {
+                        obj[prop] = svc;
+                    } else {
+                        obj[prop] = undefined;
+                        xservices.deactivate(obj);
+                    }
                 }
             }
         }
