@@ -40,13 +40,25 @@ xservices.getService = function(filter) {
     }
     return list[0];
 };
-xservices.injectServices = function(obj) {
-    for (var ref in obj.inject) {
-        var val = obj.inject[ref];
+xservices.handle = function(obj) {
+    var compSpec = obj.cs;
+    xservices.handleRegistration(obj, compSpec);
+    xservices.handleInjection(obj, compSpec);
+};
+
+xservices.handleRegistration = function(obj, compSpec) {
+    if (compSpec.service !== undefined) {
+        xservices.registerService(obj, compSpec.service);
+    }
+};
+
+xservices.handleInjection = function(obj, compSpec) {
+    for (var ref in compSpec.injection) {
+        var val = compSpec.injection[ref];
         var svc = xservices.getService(val);
         obj[ref] = svc;
         xservices.injected[val] = obj;
-    }
+    }    
 };
 xservices.reinjectServices = function(filters) {
     var toReinject = {};
@@ -67,8 +79,9 @@ xservices.reinjectServices = function(filters) {
         var list = toReinject[filter];
         for (var j = 0; j < list.length; j++) {
             var obj = list[j];
-            for (var prop in obj.inject) {
-                if (obj.inject[prop] === filter) {
+            var compSpec = obj.cs;
+            for (var prop in compSpec.injection) {
+                if (compSpec.injection[prop] === filter) {
                     obj[prop] = xservices.getService(filter);
                 }
             }
@@ -87,7 +100,7 @@ xservices.testinject = function() {
     setupServices();
     var q = new Object();
     q.inject = {xxx: "b", yyy: "x"};
-    xservices.injectServices(q);
+    xservices.handle(q);
 
     q.xxx.aaah();  // prints out aaaah
     xservices.unregisterService(xservices.getService("a"));

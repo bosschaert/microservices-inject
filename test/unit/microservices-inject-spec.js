@@ -7,8 +7,10 @@ describe("Microservices Inject", function() {
         registerServiceX();
 
         var q = new Object();
-        q.inject = {inj: "myKey"};
-        xservices.injectServices(q);
+        q.cs = {injection: {
+                inj: "myKey"
+        }};
+        xservices.handle(q);
         expect(q.inj.doit()).toEqual("X");
     });
     
@@ -16,8 +18,10 @@ describe("Microservices Inject", function() {
         registerServiceX();
        
         var q = new Object();
-        q.inject = {inj: "myKey"};
-        xservices.injectServices(q);
+        q.cs = {injection: {
+                inj: "myKey"
+        }};
+        xservices.handle(q);
 
         expect(q.inj.doit()).toEqual("X");
         registerServiceX2();
@@ -26,7 +30,23 @@ describe("Microservices Inject", function() {
     });
     
     it("Test Registration", function() {
+        var q = new Object();
+        q.cs = {service: {
+                test: "123",
+                foo: "bar"
+        }};
+        q.test = function() {
+            return "testing q";
+        }
+        xservices.handle(q)
         
+        var r = new Object();
+        r.cs = {injection: {
+                xx: "test"
+        }};
+        xservices.handle(r);
+        
+        expect(r.xx.test()).toEqual("testing q");
     });
 });
 
