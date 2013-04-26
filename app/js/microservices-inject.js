@@ -1,9 +1,12 @@
 xservices = new Object();
 xservices.registry = {}; // holds registered services
 xservices.injected = {}; // keeps track of who got injected
+xservices.toInject = [];
 
 xservices.clearRegistry = function() {
     xservices.registry = {};
+    xservices.injected = {};
+    xservices.toInject = [];
 };
 
 xservices.registerService = function(obj, props) {
@@ -43,8 +46,18 @@ xservices.getService = function(filter) {
 xservices.handle = function(obj) {
     var compSpec = obj.cs;
     xservices.handleRegistration(obj, compSpec);
-    xservices.handleInjection(obj, compSpec);
-    xservices.handleActivator(obj, compSpec);
+
+    if (compSpec.injection === undefined) {
+        xservices.handleActivator(obj);
+    } else {
+        xservices.toInject.push(obj);
+    }
+
+    for (var i = 0; i < xservices.toInject.length; i++) {
+        if (xservices.handleReinjection(xservices.toInject[i])) {
+            xservices.handleActivator(xservices.toInject[i]);
+        }
+    }
 };
 
 xservices.handleRegistration = function(obj, compSpec) {
@@ -53,20 +66,53 @@ xservices.handleRegistration = function(obj, compSpec) {
     }
 };
 
-xservices.handleInjection = function(obj, compSpec) {
-    for (var ref in compSpec.injection) {
-        var val = compSpec.injection[ref];
-        var svc = xservices.getService(val);
-        obj[ref] = svc;
-        xservices.injected[val] = obj;
-    }    
+xservices.handleInjection = function(obj) {
+    if (obj.cs.injection === undefined) {
+        return true;
+    }
+
+    var allDone = true;
+    for (var prop in obj.cs.injection) {
+        if (obj[prop] === undefined) {
+            var filter = obj.cs.injection[prop];
+            var svc = xservices.getService(filter);
+            if (svc !== undefined) {
+                obj[prop] = svc;
+                xservices.injected[filter] = obj;
+            } else {
+                allDone = false;
+            }
+        }
+    }
+    return allDone;
 };
 
-xservices.handleActivator = function(obj, compSpec) {
-    if (compSpec.activator !== undefined) {
-        compSpec.activator();
+xservices.handleActivator = function(obj) {
+    if (obj.cs.activator !== undefined) {
+        obj.cs.activator();
     }
 };
+
+xservices.handleReinjection = function(obj) {
+    if (xservices.isSatisfied(obj)) {
+        return false;
+    }
+    return xservices.handleInjection(obj);
+};
+
+xservices.isSatisfied = function(obj) {
+    if (obj.cs.injection === undefined) {
+        return true;
+    }
+
+    for (var prop in obj.cs.injection) {
+        if (obj[prop] === undefined) {
+            return false;
+        }
+    }
+    return true;
+}
+
 xservices.reinjectServices = function(filters) {
     var toReinject = {};
     for (var i = 0; i < filters.length; i++) {
