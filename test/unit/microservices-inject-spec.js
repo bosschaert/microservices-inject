@@ -114,13 +114,16 @@ describe("Microservices Inject", function() {
         expect(xResponse.length).toEqual(1);
         expect(xResponse[0]).toEqual("from Y");
 
+        // Unregister z. This should have a cascading effect through to y and x.
         xservices.unregisterService(z);
 
         expect(yResponse.length).toEqual(2);
         expect(yResponse[0]).toEqual("activated");
         expect(yResponse[1]).toEqual("deactivated");
 
-        // unregister a service, and test the cascading effect.
+        expect(xResponse.length).toEqual(2);
+        expect(xResponse[0]).toEqual("from Y");
+        expect(xResponse[1]).toEqual("d");
     });
 });
 

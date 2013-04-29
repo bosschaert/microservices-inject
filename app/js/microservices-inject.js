@@ -50,6 +50,9 @@ xservices.getService = function(filter) {
     if (list === undefined) {
         return null;
     }
+    if (list.length === 0) {
+        return null;
+    }
     return list[0];
 };
 
@@ -67,12 +70,22 @@ xservices.handle = function(obj) {
 // Below this point only internal functions.
 
 xservices.HandledObject = function(obj) {
+    // constructor function
     this.object = obj;
     this.satisfied = false;
 
     this.setSatisfied = function(val) {
         this.satisfied = val;
     }
+}
+
+xservices.__findHandledObject = function(obj) {
+    for (var i = 0; i < xservices.handled.length; i++) {
+        if (xservices.handled[i].object === obj) {
+            return xservices.handled[i];
+        }
+    }
+    return null;
 }
 
 xservices.__injectServices = function() {
@@ -87,6 +100,10 @@ xservices.__handleRegistration = function(obj) {
     if (obj.$cs.service !== undefined) {
         xservices.registerService(obj, obj.$cs.service);
     }
+};
+
+xservices.__handleUnregistration = function(obj) {
+    xservices.unregisterService(obj);
 };
 
 xservices.__handleInjection = function(hobj) {
@@ -124,6 +141,18 @@ xservices.__handleActivation = function(hobj) {
     }
 };
 
+xservices.__handleDeactivation = function(hobj) {
+    if (hobj.satisfied === true) {
+        return;
+    }
+
+    var obj = hobj.object;
+    xservices.__handleUnregistration(obj);
+    if (obj.$cs.deactivator !== undefined) {
+        obj.$cs.deactivator();
+    }
+};
+
 xservices.__handleReinjection = function(hobj) {
     // if (hobj.satisfied === true) {
     if (xservices.__isSatisfied(hobj.object)) {
@@ -146,6 +175,7 @@ xservices.__isSatisfied = function(obj) {
     return true;
 }
 
+// TODO !! remove
 xservices.__deactivate = function(obj) {
     // unregister services
     if (obj.$cs.deactivator !== undefined) {
@@ -183,7 +213,9 @@ xservices.__reinjectServices = function(filters) {
                         obj[prop] = svc;
                     } else {
                         obj[prop] = undefined;
-                        xservices.__deactivate(obj);
+                        var hobj = xservices.__findHandledObject(obj);
+                        hobj.setSatisfied(false);
+                        xservices.__handleDeactivation(hobj);
                     }
                 }
             }
