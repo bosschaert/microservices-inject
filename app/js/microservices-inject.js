@@ -4,13 +4,13 @@ xservices = new Object();
 xservices.registry = {};
 // injections keeps track of who got injected by what.
 // key is filter, value is injected object.
-xservices.injections = {}; 
-xservices.injected = []; // a list of objects that need to be injected in some way
+xservices.injections = {};
+xservices.handled = [];
 
 xservices.clearRegistry = function() {
     xservices.registry = {};
     xservices.injections = {};
-    xservices.injected = []; // TODO do we need to keep track of the activation state?
+    xservices.handled = [];
 };
 
 xservices.registerService = function(obj, props) {
@@ -42,6 +42,7 @@ xservices.unregisterService = function(obj) {
     }
     xservices.__reinjectServices(unregistered);
 };
+
 xservices.getService = function(filter) {
     filter = xservices.__truncateFilter(filter);
 
@@ -51,34 +52,45 @@ xservices.getService = function(filter) {
     }
     return list[0];
 };
-xservices.handle = function(obj) {
-    var compSpec = obj.$cs;
-    xservices.__handleRegistration(obj, compSpec);
 
-    if (compSpec.injection === undefined) {
-        xservices.__handleActivator(obj);
-    } else {
-        xservices.injected.push(obj);
+xservices.handle = function(obj) {
+    var hobj = new xservices.HandledObject(obj);
+    xservices.handled.push(hobj);
+    if (obj.$cs.injection === undefined) {
+        hobj.setSatisfied(true);
+        xservices.__handleActivation(hobj);
     }
 
     xservices.__injectServices();
 };
 
+// Below this point only internal functions.
+
+xservices.HandledObject = function(obj) {
+    this.object = obj;
+    this.satisfied = false;
+
+    this.setSatisfied = function(val) {
+        this.satisfied = val;
+    }
+}
+
 xservices.__injectServices = function() {
-    for (var i = 0; i < xservices.injected.length; i++) {
-        if (xservices.__handleReinjection(xservices.injected[i])) {
-            xservices.__handleActivator(xservices.injected[i]);
+    for (var i = 0; i < xservices.handled.length; i++) {
+        if (xservices.__handleReinjection(xservices.handled[i])) {
+            xservices.__handleActivation(xservices.handled[i]);
         }
     }
 };
 
-xservices.__handleRegistration = function(obj, compSpec) {
-    if (compSpec.service !== undefined) {
-        xservices.registerService(obj, compSpec.service);
+xservices.__handleRegistration = function(obj) {
+    if (obj.$cs.service !== undefined) {
+        xservices.registerService(obj, obj.$cs.service);
     }
 };
 
-xservices.__handleInjection = function(obj) {
+xservices.__handleInjection = function(hobj) {
+    var obj = hobj.object;
     if (obj.$cs.injection === undefined) {
         return true;
     }
@@ -96,22 +108,31 @@ xservices.__handleInjection = function(obj) {
             }
         }
     }
+    hobj.setSatisfied(allDone);
     return allDone;
 };
 
-xservices.__handleActivator = function(obj) {
+xservices.__handleActivation = function(hobj) {
+    if (hobj.satisfied === false) {
+        return;
+    }
+    
+    var obj = hobj.object;
+    xservices.__handleRegistration(obj);
     if (obj.$cs.activator !== undefined) {
         obj.$cs.activator();
     }
 };
 
-xservices.__handleReinjection = function(obj) {
-    if (xservices.__isSatisfied(obj)) {
+xservices.__handleReinjection = function(hobj) {
+    // if (hobj.satisfied === true) {
+    if (xservices.__isSatisfied(hobj.object)) {
         return false;
     }
-    return xservices.__handleInjection(obj);
+    return xservices.__handleInjection(hobj);
 };
 
+// TODO !!! should not be needed
 xservices.__isSatisfied = function(obj) {
     if (obj.$cs.injection === undefined) {
         return true;
@@ -158,7 +179,7 @@ xservices.__reinjectServices = function(filters) {
             for (var prop in compSpec.injection) {
                 if (xservices.__truncateFilter(compSpec.injection[prop]) === filter) {
                     var svc = xservices.getService(filter);
-                    if (svc != null) {
+                    if (svc !== null) {
                         obj[prop] = svc;
                     } else {
                         obj[prop] = undefined;

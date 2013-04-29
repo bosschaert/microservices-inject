@@ -68,31 +68,57 @@ describe("Microservices Inject", function() {
     });
 
     it("Test activation once dependency available", function() {
+        // Set up x, which depends on y
+        var x = new Object();
+        var xResponse = [];
+        x.myActivator = function() {
+            xResponse.push(x.i.op());
+        };
+        x.myDeactivator = function() {
+            xResponse.push("d");
+        };
+        x.$cs = {activator: x.myActivator,
+                    deactivator: x.myDeactivator,
+                    injection: { i: "yservice" }};
+        xservices.handle(x);
+
+        // Set up y, which depends on z
         var y = new Object();
-        var response = [];
+        var yResponse = [];
         y.testActivator = function() {
-            response.push("activated");
-        }
+            yResponse.push("activated");
+        };
         y.testDeactivator = function() {
-            response.push("deactivated");
+            yResponse.push("deactivated");
+        };
+        y.op = function() {
+            return "from Y";
         }
         y.$cs = {activator: y.testActivator,
                 deactivator: y.testDeactivator,
-                injection: { injected: "dep=*" }};
+                injection: { injected: "dep=*" },
+                service: { yservice: "yes" }};
         xservices.handle(y);
-        expect(response.length).toEqual(0);
 
+        // Neither X nor Y have been activated
+        expect(xResponse.length).toEqual(0);
+        expect(yResponse.length).toEqual(0);
+
+        // Register Z, should activate Y and then X
         var z = new Object();
         xservices.registerService(z, { dep: "foo"});
 
-        expect(response.length).toEqual(1);
-        expect(response[0]).toEqual("activated");
+        expect(yResponse.length).toEqual(1);
+        expect(yResponse[0]).toEqual("activated");
+
+        expect(xResponse.length).toEqual(1);
+        expect(xResponse[0]).toEqual("from Y");
 
         xservices.unregisterService(z);
 
-        expect(response.length).toEqual(2);
-        expect(response[0]).toEqual("activated");
-        expect(response[1]).toEqual("deactivated");
+        expect(yResponse.length).toEqual(2);
+        expect(yResponse[0]).toEqual("activated");
+        expect(yResponse[1]).toEqual("deactivated");
 
         // unregister a service, and test the cascading effect.
     });
