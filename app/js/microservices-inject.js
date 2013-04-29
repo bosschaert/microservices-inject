@@ -116,12 +116,25 @@ xservices.__handleInjection = function(hobj) {
     for (var prop in obj.$cs.injection) {
         if (obj[prop] === undefined) {
             var filter = obj.$cs.injection[prop];
-            var svc = xservices.getService(filter);
-            if (svc !== null) {
-                obj[prop] = svc;
-                xservices.injections[filter] = obj;
-            } else {
-                allDone = false;
+
+            if (typeof filter === "string") {
+                var svc = xservices.getService(filter);
+                if (svc !== null) {
+                    obj[prop] = svc;
+                    xservices.injections[filter] = obj;
+                } else {
+                    allDone = false;
+                }
+            } else if (typeof filter === "object") {
+                var svc = xservices.getService(filter.filter);
+                if (svc !== null) {
+                    obj[prop] = svc;
+                    xservices.injections[filter.filter] = obj;
+                } else {
+                    if (filter.policy === "required") {
+                        allDone = false;
+                    }
+                }
             }
         }
     }
@@ -153,11 +166,15 @@ xservices.__handleDeactivation = function(hobj) {
     }
 };
 
+// Returns whether the component needs to be activated
 xservices.__handleReinjection = function(hobj) {
-    if (hobj.satisfied === true) {
+    var wasSatisfied = hobj.satisfied;
+    var justSatisfied = xservices.__handleInjection(hobj);
+    if (wasSatisfied) {
         return false;
+    } else {
+        return justSatisfied;
     }
-    return xservices.__handleInjection(hobj);
 };
 
 xservices.__reinjectServices = function(filters) {
@@ -184,15 +201,27 @@ xservices.__reinjectServices = function(filters) {
             var obj = list[j];
             var compSpec = obj.$cs;
             for (var prop in compSpec.injection) {
-                if (xservices.__truncateFilter(compSpec.injection[prop]) === filter) {
+                // compSpec.injection[prop] can be an object....
+                var io = compSpec.injection[prop];
+                var declaredFilter;
+                var declaredPolicy = "required";
+                if (typeof io === "string") {
+                    declaredFilter = io;
+                } else if (typeof io === "object") {
+                    declaredFilter = io.filter;
+                    declaredPolicy = io.policy;
+                }
+                if (xservices.__truncateFilter(declaredFilter) === filter) {
                     var svc = xservices.getService(filter);
                     if (svc !== null) {
                         obj[prop] = svc;
                     } else {
                         obj[prop] = undefined;
-                        var hobj = xservices.__findHandledObject(obj);
-                        hobj.setSatisfied(false);
-                        xservices.__handleDeactivation(hobj);
+                        if (declaredPolicy === "required") {
+                            var hobj = xservices.__findHandledObject(obj);
+                            hobj.setSatisfied(false);
+                            xservices.__handleDeactivation(hobj);
+                        }
                     }
                 }
             }

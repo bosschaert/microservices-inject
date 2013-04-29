@@ -27,11 +27,7 @@ describe("Microservices Inject", function() {
         expect(q.inj.doit()).toEqual("X2");        
     });
 
-    it("Test Injection Policy 1/Dependency Model", function() {
-
-    });
-    
-    it("Test Service Registration", function() {
+    it("Test Service Registration and Dependency Injection", function() {
         var q = new Object();
         q.$cs = {service: {
                 test: "123",
@@ -77,9 +73,10 @@ describe("Microservices Inject", function() {
         x.myDeactivator = function() {
             xResponse.push("d");
         };
-        x.$cs = {activator: x.myActivator,
-                    deactivator: x.myDeactivator,
-                    injection: { i: "yservice" }};
+        x.$cs = {
+            activator: x.myActivator,
+            deactivator: x.myDeactivator,
+            injection: { i: "yservice" }};
         xservices.handle(x);
 
         // Set up y, which depends on z
@@ -94,10 +91,11 @@ describe("Microservices Inject", function() {
         y.op = function() {
             return "from Y";
         }
-        y.$cs = {activator: y.testActivator,
-                deactivator: y.testDeactivator,
-                injection: { injected: "dep=*" },
-                service: { yservice: "yes" }};
+        y.$cs = {
+            activator: y.testActivator,
+            deactivator: y.testDeactivator,
+            injection: { injected: "dep=*" },
+            service: { yservice: "yes" }};
         xservices.handle(y);
 
         // Neither X nor Y have been activated, the service should not yet be registered.
@@ -129,6 +127,39 @@ describe("Microservices Inject", function() {
         expect(xResponse[1]).toEqual("d");
 
         expect(xservices.getService("yservice=*")).toBeNull();
+    });
+
+    it("Test Optional Dependencies", function() {
+        var y = new Object();
+        var resp = [];
+        y.act = function() {
+            resp.push("Activated: " + y.injected);
+        }
+        y.deact = function() {
+            resp.push("Deactivated");
+        }
+        y.$cs = {
+            activator: y.act,
+            deactivator: y.deact,
+            injection: { injected: { filter: "zsvc=*", policy: "optional" }},
+            service: { yservice: "opt" }};
+        xservices.handle(y);
+
+        expect(y.injected).toBeUndefined();
+        expect(resp.length).toEqual(1);
+        expect(resp[0]).toEqual("Activated: undefined");
+
+        var z = new Object();
+        z.test = function() {
+            return "ZZZ";
+        }
+        xservices.registerService(z, { zsvc: "blah"});
+        
+        expect(y.injected.test()).toEqual("ZZZ");
+
+        xservices.unregisterService(z);
+        expect(y.injected).toBeUndefined();
+        expect(resp.length).toEqual(1);
     });
 });
 
