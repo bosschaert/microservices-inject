@@ -23,7 +23,7 @@ xservices.registerService = function(obj, props) {
         svcs.push(obj);
     }
 
-    xservices.injectServices();
+    xservices.__injectServices();
 };
 
 xservices.unregisterService = function(obj) {
@@ -40,7 +40,7 @@ xservices.unregisterService = function(obj) {
             }
         }
     }
-    xservices.reinjectServices(unregistered);
+    xservices.__reinjectServices(unregistered);
 };
 xservices.getService = function(filter) {
     filter = xservices.__truncateFilter(filter);
@@ -52,41 +52,41 @@ xservices.getService = function(filter) {
     return list[0];
 };
 xservices.handle = function(obj) {
-    var compSpec = obj.cs;
-    xservices.handleRegistration(obj, compSpec);
+    var compSpec = obj.$cs;
+    xservices.__handleRegistration(obj, compSpec);
 
     if (compSpec.injection === undefined) {
-        xservices.handleActivator(obj);
+        xservices.__handleActivator(obj);
     } else {
         xservices.injected.push(obj);
     }
 
-    xservices.injectServices();
+    xservices.__injectServices();
 };
 
-xservices.injectServices = function() {
+xservices.__injectServices = function() {
     for (var i = 0; i < xservices.injected.length; i++) {
-        if (xservices.handleReinjection(xservices.injected[i])) {
-            xservices.handleActivator(xservices.injected[i]);
+        if (xservices.__handleReinjection(xservices.injected[i])) {
+            xservices.__handleActivator(xservices.injected[i]);
         }
     }
 };
 
-xservices.handleRegistration = function(obj, compSpec) {
+xservices.__handleRegistration = function(obj, compSpec) {
     if (compSpec.service !== undefined) {
         xservices.registerService(obj, compSpec.service);
     }
 };
 
-xservices.handleInjection = function(obj) {
-    if (obj.cs.injection === undefined) {
+xservices.__handleInjection = function(obj) {
+    if (obj.$cs.injection === undefined) {
         return true;
     }
 
     var allDone = true;
-    for (var prop in obj.cs.injection) {
+    for (var prop in obj.$cs.injection) {
         if (obj[prop] === undefined) {
-            var filter = obj.cs.injection[prop];
+            var filter = obj.$cs.injection[prop];
             var svc = xservices.getService(filter);
             if (svc !== null) {
                 obj[prop] = svc;
@@ -99,25 +99,25 @@ xservices.handleInjection = function(obj) {
     return allDone;
 };
 
-xservices.handleActivator = function(obj) {
-    if (obj.cs.activator !== undefined) {
-        obj.cs.activator();
+xservices.__handleActivator = function(obj) {
+    if (obj.$cs.activator !== undefined) {
+        obj.$cs.activator();
     }
 };
 
-xservices.handleReinjection = function(obj) {
-    if (xservices.isSatisfied(obj)) {
+xservices.__handleReinjection = function(obj) {
+    if (xservices.__isSatisfied(obj)) {
         return false;
     }
-    return xservices.handleInjection(obj);
+    return xservices.__handleInjection(obj);
 };
 
-xservices.isSatisfied = function(obj) {
-    if (obj.cs.injection === undefined) {
+xservices.__isSatisfied = function(obj) {
+    if (obj.$cs.injection === undefined) {
         return true;
     }
 
-    for (var prop in obj.cs.injection) {
+    for (var prop in obj.$cs.injection) {
         if (obj[prop] === undefined) {
             return false;
         }
@@ -125,14 +125,14 @@ xservices.isSatisfied = function(obj) {
     return true;
 }
 
-xservices.deactivate = function(obj) {
+xservices.__deactivate = function(obj) {
     // unregister services
-    if (obj.cs.deactivator !== undefined) {
-        obj.cs.deactivator();
+    if (obj.$cs.deactivator !== undefined) {
+        obj.$cs.deactivator();
     }
 }
 
-xservices.reinjectServices = function(filters) {
+xservices.__reinjectServices = function(filters) {
     var toReinject = {};
     for (var i = 0; i < filters.length; i++) {
         for (var filter in xservices.injections) {
@@ -154,7 +154,7 @@ xservices.reinjectServices = function(filters) {
         var list = toReinject[filter];
         for (var j = 0; j < list.length; j++) {
             var obj = list[j];
-            var compSpec = obj.cs;
+            var compSpec = obj.$cs;
             for (var prop in compSpec.injection) {
                 if (xservices.__truncateFilter(compSpec.injection[prop]) === filter) {
                     var svc = xservices.getService(filter);
@@ -162,7 +162,7 @@ xservices.reinjectServices = function(filters) {
                         obj[prop] = svc;
                     } else {
                         obj[prop] = undefined;
-                        xservices.deactivate(obj);
+                        xservices.__deactivate(obj);
                     }
                 }
             }

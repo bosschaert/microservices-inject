@@ -5,7 +5,7 @@ describe("Microservices Inject", function() {
         registerServiceX();
 
         var q = new Object();
-        q.cs = {injection: {
+        q.$cs = {injection: {
                 inj: "myKey=*"
         }};
         xservices.handle(q);
@@ -16,7 +16,7 @@ describe("Microservices Inject", function() {
         registerServiceX();
        
         var q = new Object();
-        q.cs = {injection: {
+        q.$cs = {injection: {
                 inj: "myKey=*"
         }};
         xservices.handle(q);
@@ -33,7 +33,7 @@ describe("Microservices Inject", function() {
     
     it("Test Service Registration", function() {
         var q = new Object();
-        q.cs = {service: {
+        q.$cs = {service: {
                 test: "123",
                 foo: "bar"
         }};
@@ -43,7 +43,7 @@ describe("Microservices Inject", function() {
         xservices.handle(q)
         
         var r = new Object();
-        r.cs = {injection: {
+        r.$cs = {injection: {
                 xx: "test=*"
         }};
         xservices.handle(r);
@@ -57,7 +57,7 @@ describe("Microservices Inject", function() {
         x.act = function() {
             response.push("activator");
         };
-        x.cs = {activator: x.act};
+        x.$cs = {activator: x.act};
 
         expect(response.length).toEqual(0);
 
@@ -76,7 +76,7 @@ describe("Microservices Inject", function() {
         y.testDeactivator = function() {
             response.push("deactivated");
         }
-        y.cs = {activator: y.testActivator,
+        y.$cs = {activator: y.testActivator,
                 deactivator: y.testDeactivator,
                 injection: { injected: "dep=*" }};
         xservices.handle(y);
