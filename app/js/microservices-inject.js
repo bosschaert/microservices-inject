@@ -1,6 +1,10 @@
 xservices = new Object();
-xservices.registry = {}; // holds registered services
-xservices.injections = {}; // keeps track of who got injected by what
+// in the absence of a real service registry, here a poor man's one
+// this one only records property keys with the object as values.
+xservices.registry = {};
+// injections keeps track of who got injected by what.
+// key is filter, value is injected object.
+xservices.injections = {}; 
 xservices.injected = []; // a list of objects that need to be injected in some way
 
 xservices.clearRegistry = function() {
@@ -39,6 +43,8 @@ xservices.unregisterService = function(obj) {
     xservices.reinjectServices(unregistered);
 };
 xservices.getService = function(filter) {
+    filter = xservices.__truncateFilter(filter);
+
     var list = xservices.registry[filter];
     if (list === undefined) {
         return null;
@@ -130,13 +136,16 @@ xservices.reinjectServices = function(filters) {
     var toReinject = {};
     for (var i = 0; i < filters.length; i++) {
         for (var filter in xservices.injections) {
+            // todo better filtering
+            var obj = xservices.injections[filter];
+            filter = xservices.__truncateFilter(filter);
             if (filter === filters[i]) {
                 var objList = toReinject[filter];
                 if (objList === undefined) {
                     objList = [];
                     toReinject[filter] = objList;
                 }
-                objList.push(xservices.injections[filter]);
+                objList.push(obj);
             }
         }
     }
@@ -147,7 +156,7 @@ xservices.reinjectServices = function(filters) {
             var obj = list[j];
             var compSpec = obj.cs;
             for (var prop in compSpec.injection) {
-                if (compSpec.injection[prop] === filter) {
+                if (xservices.__truncateFilter(compSpec.injection[prop]) === filter) {
                     var svc = xservices.getService(filter);
                     if (svc != null) {
                         obj[prop] = svc;
@@ -160,3 +169,12 @@ xservices.reinjectServices = function(filters) {
         }
     }
 };
+
+xservices.__truncateFilter = function(filter) {
+    var idx = filter.indexOf("=");
+    if (idx > 0) {
+        return filter.substring(0, idx);
+    } else {
+        return filter;
+    }
+}

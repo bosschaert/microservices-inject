@@ -6,7 +6,7 @@ describe("Microservices Inject", function() {
 
         var q = new Object();
         q.cs = {injection: {
-                inj: "myKey"
+                inj: "myKey=*"
         }};
         xservices.handle(q);
         expect(q.inj.doit()).toEqual("X");
@@ -17,7 +17,7 @@ describe("Microservices Inject", function() {
        
         var q = new Object();
         q.cs = {injection: {
-                inj: "myKey"
+                inj: "myKey=*"
         }};
         xservices.handle(q);
 
@@ -44,7 +44,7 @@ describe("Microservices Inject", function() {
         
         var r = new Object();
         r.cs = {injection: {
-                xx: "test"
+                xx: "test=*"
         }};
         xservices.handle(r);
         
@@ -78,7 +78,7 @@ describe("Microservices Inject", function() {
         }
         y.cs = {activator: y.testActivator,
                 deactivator: y.testDeactivator,
-                injection: { injected: "dep" }};
+                injection: { injected: "dep=*" }};
         xservices.handle(y);
         expect(response.length).toEqual(0);
 
