@@ -76,8 +76,8 @@ xservices.HandledObject = function(obj) {
 
     this.setSatisfied = function(val) {
         this.satisfied = val;
-    }
-}
+    };
+};
 
 xservices.__findHandledObject = function(obj) {
     for (var i = 0; i < xservices.handled.length; i++) {
@@ -86,7 +86,7 @@ xservices.__findHandledObject = function(obj) {
         }
     }
     return null;
-}
+};
 
 xservices.__injectServices = function() {
     for (var i = 0; i < xservices.handled.length; i++) {
@@ -154,34 +154,11 @@ xservices.__handleDeactivation = function(hobj) {
 };
 
 xservices.__handleReinjection = function(hobj) {
-    // if (hobj.satisfied === true) {
-    if (xservices.__isSatisfied(hobj.object)) {
+    if (hobj.satisfied === true) {
         return false;
     }
     return xservices.__handleInjection(hobj);
 };
-
-// TODO !!! should not be needed
-xservices.__isSatisfied = function(obj) {
-    if (obj.$cs.injection === undefined) {
-        return true;
-    }
-
-    for (var prop in obj.$cs.injection) {
-        if (obj[prop] === undefined) {
-            return false;
-        }
-    }
-    return true;
-}
-
-// TODO !! remove
-xservices.__deactivate = function(obj) {
-    // unregister services
-    if (obj.$cs.deactivator !== undefined) {
-        obj.$cs.deactivator();
-    }
-}
 
 xservices.__reinjectServices = function(filters) {
     var toReinject = {};
@@ -223,6 +200,8 @@ xservices.__reinjectServices = function(filters) {
     }
 };
 
+// This function is used to implement a poor man's filtering in the absence of a
+// real service registry.
 xservices.__truncateFilter = function(filter) {
     var idx = filter.indexOf("=");
     if (idx > 0) {
@@ -230,4 +209,4 @@ xservices.__truncateFilter = function(filter) {
     } else {
         return filter;
     }
-}
+};

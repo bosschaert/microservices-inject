@@ -100,9 +100,10 @@ describe("Microservices Inject", function() {
                 service: { yservice: "yes" }};
         xservices.handle(y);
 
-        // Neither X nor Y have been activated
+        // Neither X nor Y have been activated, the service should not yet be registered.
         expect(xResponse.length).toEqual(0);
         expect(yResponse.length).toEqual(0);
+        expect(xservices.getService("yservice=*")).toBeNull();
 
         // Register Z, should activate Y and then X
         var z = new Object();
@@ -113,10 +114,12 @@ describe("Microservices Inject", function() {
 
         expect(xResponse.length).toEqual(1);
         expect(xResponse[0]).toEqual("from Y");
+        expect(xservices.getService("yservice=*")).not.toBeNull();
 
         // Unregister z. This should have a cascading effect through to y and x.
         xservices.unregisterService(z);
 
+        // The unregistration should have deactivated the dependencies.
         expect(yResponse.length).toEqual(2);
         expect(yResponse[0]).toEqual("activated");
         expect(yResponse[1]).toEqual("deactivated");
@@ -124,6 +127,8 @@ describe("Microservices Inject", function() {
         expect(xResponse.length).toEqual(2);
         expect(xResponse[0]).toEqual("from Y");
         expect(xResponse[1]).toEqual("d");
+
+        expect(xservices.getService("yservice=*")).toBeNull();
     });
 });
 
