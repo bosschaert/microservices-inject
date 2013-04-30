@@ -67,6 +67,11 @@ xservices.handle = function(obj) {
     xservices.__injectServices();
 };
 
+// TODO maybe we don't need a separate method here...
+xservices.handleDesc = function(desc) {
+    xservices.handle(desc);
+};
+
 // Below this point only internal functions.
 
 xservices.HandledObject = function(obj) {
@@ -150,7 +155,12 @@ xservices.__handleActivation = function(hobj) {
     var obj = hobj.object;
     xservices.__handleRegistration(obj);
     if (obj.$cs.activator !== undefined) {
-        obj.$cs.activator();
+        if (typeof obj.$cs.activator === "string") {
+            var activator = obj[obj.$cs.activator];
+            activator();
+        } else {
+            obj.$cs.activator();
+        }
     }
 };
 
@@ -162,7 +172,12 @@ xservices.__handleDeactivation = function(hobj) {
     var obj = hobj.object;
     xservices.__handleUnregistration(obj);
     if (obj.$cs.deactivator !== undefined) {
-        obj.$cs.deactivator();
+        if (typeof obj.$cs.deactivator === "string") {
+            var deactivator = obj[obj.$cs.deactivator];
+            deactivator();
+        } else {
+            obj.$cs.deactivator();
+        }
     }
 };
 

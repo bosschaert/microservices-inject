@@ -47,7 +47,7 @@ describe("Microservices Inject", function() {
         expect(r.xx.test()).toEqual("testing q");
     });
 
-    it("Test simple activation", function() {
+    it("Test Simple Activation", function() {
         var x = new Object();
         var response = [];
         x.act = function() {
@@ -63,7 +63,7 @@ describe("Microservices Inject", function() {
         expect(response[0]).toEqual("activator");
     });
 
-    it("Test activation once dependency available", function() {
+    it("Test Activation once Dependency Available", function() {
         // Set up x, which depends on y
         var x = new Object();
         var xResponse = [];
@@ -160,6 +160,43 @@ describe("Microservices Inject", function() {
         xservices.unregisterService(z);
         expect(y.injected).toBeUndefined();
         expect(resp.length).toEqual(1);
+    });
+
+    it("Test JSON Description-based Operation", function() {
+        var resp = [];
+        var desc = {
+            sref: undefined,
+
+            doSomething: function() {
+                return "something";
+            },
+            act: function() {
+                resp.push("activated: " + desc.sref.test());
+            },
+            deact: function() {
+                resp.push("deactivated: " + desc.doSomething())},
+            $cs : { activator: "act",
+                    deactivator: "deact",
+                    injection: { sref: "test=*"}}
+        };
+
+        expect(resp.length).toEqual(0);
+        xservices.handleDesc(desc);
+        expect(resp.length).toEqual(0);
+
+        var test = new Object();
+        test.test = function() {
+            return "testing";
+        }
+        xservices.registerService(test, { test: "something"});
+
+        expect(resp.length).toEqual(1);
+        expect(resp[0]).toEqual("activated: testing");
+
+        xservices.unregisterService(test);
+        expect(resp.length).toEqual(2);
+        expect(resp[0]).toEqual("activated: testing");
+        expect(resp[1]).toEqual("deactivated: something");
     });
 });
 
