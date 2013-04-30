@@ -35,8 +35,8 @@ describe("Microservices Inject", function() {
         }};
         q.test = function() {
             return "testing q";
-        }
-        xservices.handle(q)
+        };
+        xservices.handle(q);
         
         var r = new Object();
         r.$cs = {injection: {
@@ -90,7 +90,7 @@ describe("Microservices Inject", function() {
         };
         y.op = function() {
             return "from Y";
-        }
+        };
         y.$cs = {
             activator: y.testActivator,
             deactivator: y.testDeactivator,
@@ -134,10 +134,10 @@ describe("Microservices Inject", function() {
         var resp = [];
         y.act = function() {
             resp.push("Activated: " + y.injected);
-        }
+        };
         y.deact = function() {
             resp.push("Deactivated");
-        }
+        };
         y.$cs = {
             activator: y.act,
             deactivator: y.deact,
@@ -152,7 +152,7 @@ describe("Microservices Inject", function() {
         var z = new Object();
         z.test = function() {
             return "ZZZ";
-        }
+        };
         xservices.registerService(z, { zsvc: "blah"});
         
         expect(y.injected.test()).toEqual("ZZZ");
@@ -179,7 +179,7 @@ describe("Microservices Inject", function() {
         var desc2 = {
             $cs : { activator: "act",
                     deactivator: "deact",
-                    injection: { sref: "test=*" },
+                    injection: { sref: { filter: "test=*", policy: "required" }},
                     service: { comp2: "someval" }},
 
             sref: undefined,
@@ -190,17 +190,17 @@ describe("Microservices Inject", function() {
                 resp2.push("activated: " + desc2.sref.test());
             },
             deact: function() {
-                resp2.push("deactivated: " + desc2.doSomething())}
+                resp2.push("deactivated: " + desc2.doSomething());}
         };
 
-        xservices.handleDesc(desc2);
+        xservices.handle(desc2);
         expect(resp.length).toEqual(0);
         expect(resp2.length).toEqual(0);
 
         var test = new Object();
         test.test = function() {
             return "testing";
-        }
+        };
         xservices.registerService(test, { test: "something"});
 
         expect(resp2.length).toEqual(1);

@@ -67,11 +67,6 @@ xservices.handle = function(obj) {
     xservices.__injectServices();
 };
 
-// TODO maybe we don't need a separate method here...
-xservices.handleDesc = function(desc) {
-    xservices.handle(desc);
-};
-
 // Below this point only internal functions.
 
 xservices.HandledObject = function(obj) {
