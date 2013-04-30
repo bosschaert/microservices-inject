@@ -128,10 +128,10 @@ xservices.__handleInjection = function(hobj) {
             } else if (typeof filter === "object") {
                 var svc = xservices.getService(filter.filter);
                 if (svc !== null) {
-                    obj[prop] = svc;
+                    xservices.__notifyAndInject(obj, prop, svc);
                     xservices.injections[filter.filter] = obj;
                 } else {
-                    if (filter.policy === "required") {
+                    if (filter.policy !== "optional") {
                         allDone = false;
                     }
                 }
@@ -224,9 +224,9 @@ xservices.__reinjectServices = function(filters) {
                 if (xservices.__truncateFilter(declaredFilter) === filter) {
                     var svc = xservices.getService(filter);
                     if (svc !== null) {
-                        obj[prop] = svc;
+                        xservices.__notifyAndInject(obj, prop, svc);
                     } else {
-                        obj[prop] = undefined;
+                        xservices.__notifyAndUninject(obj, prop);
                         if (declaredPolicy === "required") {
                             var hobj = xservices.__findHandledObject(obj);
                             hobj.setSatisfied(false);
@@ -238,6 +238,33 @@ xservices.__reinjectServices = function(filters) {
         }
     }
 };
+
+xservices.__notifyAndInject = function(obj, prop, service) {
+    var def = obj.$cs.injection[prop];
+    if (def.bind !== undefined) {
+        if (typeof def.bind === "string") {
+            var callback = obj[def.bind];
+            callback(service);
+        } else {
+            def.bind(service);
+        }
+    }
+    obj[prop] = service;
+};
+
+xservices.__notifyAndUninject = function(obj, prop) {
+    var def = obj.$cs.injection[prop];
+    if (def.unbind !== undefined) {
+        if (typeof def.unbind === "string") {
+            var callback = obj[def.unbind];
+            callback(obj[prop]);
+        } else {
+            def.unbind(obj[prop]);
+        }
+    }
+    obj[prop] = undefined;
+};
+
 
 // This function is used to implement a poor man's filtering in the absence of a
 // real service registry.

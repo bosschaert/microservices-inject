@@ -215,6 +215,36 @@ describe("Microservices Inject", function() {
         expect(resp.length).toEqual(1);
         expect(resp[0]).toEqual("a: something");
     });
+
+    it("Test Notification Callbacks", function() {
+        var resp = [];
+        var desc = {
+            $cs : {injection: { sref: { filter: "ts=*", bind: "bs", unbind: "ubs" }}},
+
+            sref: undefined,
+            bs: function(obj) {
+                resp.push("bound service: " + obj.test());
+            },
+            ubs: function(obj) {
+                resp.push("unbound service: " + obj.test());
+            }
+        };
+        xservices.handle(desc);
+        expect(resp.length).toEqual(0);
+
+        var test = new Object();
+        test.test = function() {
+            return "testing";
+        };
+        xservices.registerService(test, { ts: "x"});
+        expect(resp.length).toEqual(1);
+        expect(resp[0]).toEqual("bound service: testing");
+
+        xservices.unregisterService(test);
+        expect(resp.length).toEqual(2);
+        expect(resp[0]).toEqual("bound service: testing");
+        expect(resp[1]).toEqual("unbound service: testing");
+    });
 });
 
 function registerServiceX() {
