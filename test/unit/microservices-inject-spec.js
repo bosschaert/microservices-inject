@@ -278,6 +278,70 @@ describe("Microservices Inject", function() {
         xservices.unregisterService(s1);
         expect(c.refs.length).toEqual(0);
     });
+
+    it("Test Combined Injection", function() {
+        var log = [];
+        var comp1 = {
+            $cs: {
+                activator: "act",
+                deactivator: "deact",
+                injection: {
+                    refs: {filter: "m=*", policy: "optional", bind: "refsBind", unbind: "refsUnBind"},
+                    ref: {filter: "s=*", bind: "refBind", unbind: "refUnBind"}}},
+            refs: [],
+            ref: undefined,
+            refsBind: function(obj) { log.push("refsBind:" + obj.m()); },
+            refsUnBind: function(obj) { log.push("refsUnBind:" + obj.m()); },
+            refBind: function(obj) { log.push("refBind:" + obj.s()); },
+            refUnBind: function(obj) { log.push("refUnBind:" + obj.s()); },
+            act: function() { log.push("activated"); },
+            deact: function() { log.push("deactivated"); }
+        };
+        xservices.handle(comp1);
+
+        expect(log.length).toEqual(0);
+
+        var svc1 = {
+            $cs : {service: {s: "x"}},
+            s: function() { return "s!"; }
+        };
+        xservices.handle(svc1);
+
+        expect(log.length).toEqual(2);
+        expect(log[0]).toEqual("refBind:s!");
+        expect(log[1]).toEqual("activated");
+
+        xservices.handle({
+            $cs : {service: {s: "x2"}},
+            s: function() { return "s?"; }
+        });
+
+        expect(log.length).toEqual(2);
+
+        xservices.handle({
+            $cs: {service: {m: "y"}},
+            m: function() { return "m!"; }
+        });
+        expect(log.length).toEqual(3);
+        expect(log[2]).toEqual("refsBind:m!");
+
+        var svc3 = {
+            $cs: { service: {m: "y"}},
+            m: function() { return "M?"; }
+        };
+        xservices.handle(svc3);
+        expect(log.length).toEqual(4);
+        expect(log[3]).toEqual("refsBind:M?");
+
+        xservices.remove(svc3);
+        expect(log.length).toEqual(5);
+        expect(log[4]).toEqual("refsUnBind:M?");
+
+        xservices.remove(svc1);
+        expect(log.length).toEqual(7);
+        expect(log[5]).toEqual("refUnBind:s!");
+        expect(log[6]).toEqual("refBind:s?");
+    });
 });
 
 function registerServiceX() {

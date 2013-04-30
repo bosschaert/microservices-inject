@@ -76,6 +76,12 @@ xservices.handle = function(obj) {
     xservices.__injectServices();
 };
 
+xservices.remove = function(obj) {
+    xservices.unregisterService(obj);
+    var hobj = xservices.__findHandledObject(obj);
+    xservices.__handleDeactivation(hobj);
+}
+
 // Below this point only internal functions.
 
 xservices.HandledObject = function(obj) {
@@ -239,9 +245,15 @@ xservices.__reinjectServices = function(removedService, filters) {
             var obj = list[j];
 
             for (var prop in obj.$cs.injection) {
+                var declaredFilter = xservices.__getInjectionFilter(obj, prop);
+                var truncated = xservices.__truncateFilter(declaredFilter);
+                if (filter !== truncated) {
+                    // this is not the property that needs to be injected
+                    continue;
+                }
+
                 var required = xservices.__isInjectionRequired(obj, prop);
                 if (Array.isArray(obj[prop])) {
-                    // handle multiple, which is the one that got removed?
                     xservices.__notifyAndUninjectArray(obj, prop, removedService);
                     if (obj[prop].length === 0) {
                         if (required) {
