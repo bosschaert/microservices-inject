@@ -311,10 +311,11 @@ describe("Microservices Inject", function() {
         expect(log[0]).toEqual("refBind:s!");
         expect(log[1]).toEqual("activated");
 
-        xservices.handle({
+        var svc2 = {
             $cs : {service: {s: "x2"}},
             s: function() { return "s?"; }
-        });
+        };
+        xservices.handle(svc2);
 
         expect(log.length).toEqual(2);
 
@@ -341,6 +342,11 @@ describe("Microservices Inject", function() {
         expect(log.length).toEqual(7);
         expect(log[5]).toEqual("refUnBind:s!");
         expect(log[6]).toEqual("refBind:s?");
+
+        xservices.remove(svc2);
+        expect(log.length).toEqual(9);
+        expect(log[7]).toEqual("refUnBind:s?");
+        expect(log[8]).toEqual("deactivated");
     });
 });
 
