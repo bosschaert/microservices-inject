@@ -165,24 +165,37 @@ describe("Microservices Inject", function() {
     it("Test JSON Description-based Operation", function() {
         var resp = [];
         var desc = {
-            sref: undefined,
+            $cs : { activator: "act",
+                    injection: { sref: "comp2=*" }},
 
+            sref: undefined,
+            act: function() {
+                resp.push("a: " + desc.sref.doSomething());
+            }            
+        };
+        xservices.handle(desc);
+        
+        var resp2 = [];
+        var desc2 = {
+            $cs : { activator: "act",
+                    deactivator: "deact",
+                    injection: { sref: "test=*" },
+                    service: { comp2: "someval" }},
+
+            sref: undefined,
             doSomething: function() {
                 return "something";
             },
             act: function() {
-                resp.push("activated: " + desc.sref.test());
+                resp2.push("activated: " + desc2.sref.test());
             },
             deact: function() {
-                resp.push("deactivated: " + desc.doSomething())},
-            $cs : { activator: "act",
-                    deactivator: "deact",
-                    injection: { sref: "test=*"}}
+                resp2.push("deactivated: " + desc2.doSomething())}
         };
 
+        xservices.handleDesc(desc2);
         expect(resp.length).toEqual(0);
-        xservices.handleDesc(desc);
-        expect(resp.length).toEqual(0);
+        expect(resp2.length).toEqual(0);
 
         var test = new Object();
         test.test = function() {
@@ -190,13 +203,17 @@ describe("Microservices Inject", function() {
         }
         xservices.registerService(test, { test: "something"});
 
+        expect(resp2.length).toEqual(1);
+        expect(resp2[0]).toEqual("activated: testing");
         expect(resp.length).toEqual(1);
-        expect(resp[0]).toEqual("activated: testing");
+        expect(resp[0]).toEqual("a: something");
 
         xservices.unregisterService(test);
-        expect(resp.length).toEqual(2);
-        expect(resp[0]).toEqual("activated: testing");
-        expect(resp[1]).toEqual("deactivated: something");
+        expect(resp2.length).toEqual(2);
+        expect(resp2[0]).toEqual("activated: testing");
+        expect(resp2[1]).toEqual("deactivated: something");
+        expect(resp.length).toEqual(1);
+        expect(resp[0]).toEqual("a: something");
     });
 });
 
