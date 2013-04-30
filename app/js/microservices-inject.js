@@ -35,7 +35,7 @@ xservices.unregisterService = function(obj) {
                 if (unregistered.indexOf(key) === -1) {
                     unregistered.push(key);
                 }
-                val.splice(i, 1);
+                val.splice(i, 1); // Removes the object from the service registry
                 i=i-1;
             }
         }
@@ -44,16 +44,25 @@ xservices.unregisterService = function(obj) {
 };
 
 xservices.getService = function(filter) {
+    var svcs = xservices.getServices(filter);
+    if (svcs.length > 0) {
+        return svcs[0];
+    } else {
+        return null;
+    }
+};
+
+xservices.getServices = function(filter) {
     filter = xservices.__truncateFilter(filter);
 
     var list = xservices.registry[filter];
     if (list === undefined) {
-        return null;
+        return [];
     }
     if (list.length === 0) {
-        return null;
+        return [];
     }
-    return list[0];
+    return list;
 };
 
 xservices.handle = function(obj) {
@@ -115,31 +124,49 @@ xservices.__handleInjection = function(hobj) {
     var allDone = true;
     for (var prop in obj.$cs.injection) {
         if (obj[prop] === undefined) {
-            var filter = obj.$cs.injection[prop];
-
-            if (typeof filter === "string") {
-                var svc = xservices.getService(filter);
-                if (svc !== null) {
-                    obj[prop] = svc;
-                    xservices.injections[filter] = obj;
-                } else {
+            var filter = xservices.__getInjectionFilter(obj, prop);
+            var required = xservices.__isInjectionRequired(obj, prop);
+            var svc = xservices.getService(filter);
+            if (svc != null) {
+                xservices.__notifyAndInject(obj, prop, svc);
+                xservices.injections[filter] = obj; // TODO turn into a list...
+            } else {
+                if (required) {
                     allDone = false;
                 }
-            } else if (typeof filter === "object") {
-                var svc = xservices.getService(filter.filter);
-                if (svc !== null) {
-                    xservices.__notifyAndInject(obj, prop, svc);
-                    xservices.injections[filter.filter] = obj;
-                } else {
-                    if (filter.policy !== "optional") {
-                        allDone = false;
-                    }
+            }
+        } else if (Array.isArray(obj[prop])) {
+            var filter = xservices.__getInjectionFilter(obj, prop);
+            var required = xservices.__isInjectionRequired(obj, prop);
+            var allSvcs = xservices.getServices(filter);
+            xservices.__notifyAndInjectAll(obj, prop, allSvcs);
+            if (obj[prop].length === 0) {
+                if (required) {
+                    allDone = false;
                 }
             }
         }
     }
     hobj.setSatisfied(allDone);
     return allDone;
+};
+
+xservices.__getInjectionFilter = function(obj, prop) {
+    var filterDecl = obj.$cs.injection[prop];
+    if (typeof filterDecl === "string") {
+        return filterDecl;
+    } else if (typeof filterDecl === "object") {
+        return filterDecl.filter;
+    }
+    return undefined;
+};
+
+xservices.__isInjectionRequired = function(obj, prop) {
+    var filterDecl = obj.$cs.injection[prop];
+    if (typeof filterDecl === "object") {
+        return filterDecl.policy !== "optional";
+    }
+    return true;
 };
 
 xservices.__handleActivation = function(hobj) {
@@ -250,6 +277,29 @@ xservices.__notifyAndInject = function(obj, prop, service) {
         }
     }
     obj[prop] = service;
+};
+
+xservices.__notifyAndInjectAll = function(obj, prop, services) {
+    var def = obj.$cs.injection[prop];
+    var callback;
+    if (def.bind !== undefined) {
+        if (typeof def.bind === "string") {
+            callback = obj[def.bind];
+        } else {
+            callback = def.bind;
+        }
+    }
+
+    var arr = obj[prop];
+
+    for (var i = 0; i < services.length; i++) {
+        if (arr.indexOf(services[i]) < 0) {
+            if (callback !== undefined) {
+                callback(services[i]);
+            }
+            arr.push(services[i]);
+        }
+    }
 };
 
 xservices.__notifyAndUninject = function(obj, prop) {

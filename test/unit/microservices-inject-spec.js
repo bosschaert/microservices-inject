@@ -236,7 +236,7 @@ describe("Microservices Inject", function() {
         test.test = function() {
             return "testing";
         };
-        xservices.registerService(test, { ts: "x"});
+        xservices.registerService(test, { ts: "x" });
         expect(resp.length).toEqual(1);
         expect(resp[0]).toEqual("bound service: testing");
 
@@ -244,6 +244,22 @@ describe("Microservices Inject", function() {
         expect(resp.length).toEqual(2);
         expect(resp[0]).toEqual("bound service: testing");
         expect(resp[1]).toEqual("unbound service: testing");
+    });
+
+    it("Test Cardinality Multiple", function() {
+        var s1 = { op: function() { return "s1"; }};
+        xservices.registerService(s1, { x: "y" });
+        var s2 = { op: function() { return "s2"; }};
+        xservices.registerService(s2, { x: "z" });
+
+        var c = new Object();
+        c.refs = [];
+        c.$cs = {
+            injection: { refs: "x=*" }
+        };
+        expect(c.refs.length).toEqual(0);
+        xservices.handle(c);
+        expect(c.refs.length).toEqual(2);
     });
 });
 
