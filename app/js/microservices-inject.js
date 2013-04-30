@@ -27,20 +27,20 @@ xservices.registerService = function(obj, props) {
 };
 
 xservices.unregisterService = function(obj) {
-    var unregistered = [];
+    var affectedFilters = [];
     for (var key in xservices.registry) {
         var val = xservices.registry[key];
         for (var i = 0; i < val.length; i++) {
             if (val[i] === obj) {
-                if (unregistered.indexOf(key) === -1) {
-                    unregistered.push(key);
+                if (affectedFilters.indexOf(key) === -1) {
+                    affectedFilters.push(key);
                 }
                 val.splice(i, 1); // Removes the object from the service registry
                 i=i-1;
             }
         }
     }
-    xservices.__reinjectServices(unregistered);
+    xservices.__reinjectServices(obj, affectedFilters);
 };
 
 xservices.getService = function(filter) {
@@ -139,7 +139,8 @@ xservices.__handleInjection = function(hobj) {
             var filter = xservices.__getInjectionFilter(obj, prop);
             var required = xservices.__isInjectionRequired(obj, prop);
             var allSvcs = xservices.getServices(filter);
-            xservices.__notifyAndInjectAll(obj, prop, allSvcs);
+            xservices.__notifyAndInjectArray(obj, prop, allSvcs);
+            xservices.injections[filter] = obj; // TODO turn into a list...
             if (obj[prop].length === 0) {
                 if (required) {
                     allDone = false;
@@ -214,7 +215,7 @@ xservices.__handleReinjection = function(hobj) {
     }
 };
 
-xservices.__reinjectServices = function(filters) {
+xservices.__reinjectServices = function(removedService, filters) {
     var toReinject = {};
     for (var i = 0; i < filters.length; i++) {
         for (var filter in xservices.injections) {
@@ -236,25 +237,26 @@ xservices.__reinjectServices = function(filters) {
         var list = toReinject[filter];
         for (var j = 0; j < list.length; j++) {
             var obj = list[j];
-            var compSpec = obj.$cs;
-            for (var prop in compSpec.injection) {
-                // compSpec.injection[prop] can be an object....
-                var io = compSpec.injection[prop];
-                var declaredFilter;
-                var declaredPolicy = "required";
-                if (typeof io === "string") {
-                    declaredFilter = io;
-                } else if (typeof io === "object") {
-                    declaredFilter = io.filter;
-                    declaredPolicy = io.policy;
-                }
-                if (xservices.__truncateFilter(declaredFilter) === filter) {
+
+            for (var prop in obj.$cs.injection) {
+                var required = xservices.__isInjectionRequired(obj, prop);
+                if (Array.isArray(obj[prop])) {
+                    // handle multiple, which is the one that got removed?
+                    xservices.__notifyAndUninjectArray(obj, prop, removedService);
+                    if (obj[prop].length === 0) {
+                        if (required) {
+                            var hobj = xservices.__findHandledObject(obj);
+                            hobj.setSatisfied(false);
+                            xservices.__handleDeactivation(hobj);
+                        }
+                    }
+                } else {
+                    xservices.__notifyAndUninject(obj, prop);
                     var svc = xservices.getService(filter);
                     if (svc !== null) {
                         xservices.__notifyAndInject(obj, prop, svc);
                     } else {
-                        xservices.__notifyAndUninject(obj, prop);
-                        if (declaredPolicy === "required") {
+                        if (required) {
                             var hobj = xservices.__findHandledObject(obj);
                             hobj.setSatisfied(false);
                             xservices.__handleDeactivation(hobj);
@@ -279,7 +281,7 @@ xservices.__notifyAndInject = function(obj, prop, service) {
     obj[prop] = service;
 };
 
-xservices.__notifyAndInjectAll = function(obj, prop, services) {
+xservices.__notifyAndInjectArray = function(obj, prop, services) {
     var def = obj.$cs.injection[prop];
     var callback;
     if (def.bind !== undefined) {
@@ -313,6 +315,23 @@ xservices.__notifyAndUninject = function(obj, prop) {
         }
     }
     obj[prop] = undefined;
+};
+
+xservices.__notifyAndUninjectArray = function(obj, prop, service) {
+    var def = obj.$cs.injection[prop];
+    if (def.unbind !== undefined) {
+        if (typeof def.unbind === "string") {
+            var callback = obj[def.unbind];
+            callback(service);
+        } else {
+            def.unbind(service);
+        }
+    }
+    var arr = obj[prop];
+    var idx = arr.indexOf(service);
+    if (idx >= 0) {
+        arr.splice(idx, 1);
+    }
 };
 
 
